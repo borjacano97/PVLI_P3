@@ -28,6 +28,7 @@ var PreloaderScene = {
     
     this.load.onLoadStart.add(this.loadStart, this);
     this.game.load.image('player', 'images/Leon.png');
+     this.game.load.image('knife', 'images/Cuchillo.png');
     this.game.load.tilemap('tilemap', 'images/map.json', null, Phaser.Tilemap.TILED_JSON);
     this.game.load.image("tiles", "images/tiles.png");
     this.load.onLoadComplete.add(this.loadComplete, this);

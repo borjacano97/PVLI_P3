@@ -62,6 +62,7 @@ var PlayScene = {
      if (this.knife.length >0){
         this.knifeLife++;
      }
+        // Rotacion de los cuchillos
      for (var i = 0; i<this.knife.length;i++){
         this.knife[i].body.velocity.y += 2*9.8;
 	if (this.knife[i].body.velocity.x > 0){
@@ -71,11 +72,13 @@ var PlayScene = {
 	   this.knife[i].angle-=10;
 	}
      }
+        // Controla el numero de cuchillos en pantalla
      if (this.knifeLife >= 100 && this.knife.length > 0){
         this.knife[0].kill();
 	this.knifeLife = 0;
 	delete this.knife[0];
      }
+        // Crea el cuchillo
      if (this.attackButton.isDown && this.waitFire >= 30){
         this.knife.push(this.game.add.sprite(this._player.x, this._player.y ,'knife'));
 	this.game.physics.arcade.enable(this.knife[this.knife.length-1]);
@@ -107,7 +110,7 @@ var PlayScene = {
   },
 
   configure: function(){
-     //Start the Arcade Physics systems
+     // Start the Arcade Physics systems
      this.game.world.setBounds(0, 0, 5000, 1120);
      this.game.physics.startSystem(Phaser.Physics.ARCADE);
      this.game.stage.backgroundColor = '#a9f0ff';

@@ -46,10 +46,12 @@ var PlayScene = {
      if (this.cursors.left.isDown){
         this._player.body.velocity.x = this._speed*-1;
 	this.direction = 'left';
+	this._player.scale.x = -1;
      }
      else if (this.cursors.right.isDown){
         this._player.body.velocity.x = this._speed;
 	this.direction = 'right';
+	this._player.scale.x = 1;
      }
      // Gestion del salto
      if (this.jumpButton.isDown && this._player.body.onFloor() ){
@@ -59,11 +61,15 @@ var PlayScene = {
      this.waitFire++;
      if (this.knife.length >0){
         this.knifeLife++;
-	
      }
      for (var i = 0; i<this.knife.length;i++){
         this.knife[i].body.velocity.y += 2*9.8;
-	this.knife[i].angle+=10;
+	if (this.knife[i].body.velocity.x > 0){
+	   this.knife[i].angle+=10;
+	}
+	else{
+	   this.knife[i].angle-=10;
+	}
      }
      if (this.knifeLife >= 100 && this.knife.length > 0){
         this.knife[0].kill();
@@ -77,7 +83,7 @@ var PlayScene = {
             this.knife[this.knife.length-1].body.velocity.x = -500;
             this.knife[this.knife.length-1].body.velocity.y = -500;
 	    this.knife[this.knife.length-1].scale.x = -1;
-	    this.knife[this.knife.length-1].scale.y = -1;
+	    
         }
         else{
             this.knife[this.knife.length-1].body.velocity.x = 500;

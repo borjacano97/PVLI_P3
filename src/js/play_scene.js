@@ -2,7 +2,8 @@
 
 var PlayScene = {
   entities: {},
-
+  toDelete: {},
+  toAdd: {},
 
   create: function () {
       
@@ -13,44 +14,67 @@ var PlayScene = {
       this.map = this.add.tilemap('tilemap');
       this.map.addTilesetImage('tiles', 'tiles');
       // Creamos los layer del tilemap y las plataformas
-      this.platforms = this.add.physicsGroup(); 
+    /*  this.platforms = this.add.physicsGroup(); 
       this.map.createFromObjects('Platforms', 6, 'plat',1,true,false,this.platforms);
       this.platforms.setAll('body.immovable', true);
       this.platforms.setAllChildren('body.checkCollision.down', false);
       this.platforms.setAllChildren('body.checkCollision.left', false);
-      this.platforms.setAllChildren('body.checkCollision.rigth', false);
-      this.groundLayer = this.map.createLayer('GroundLayer');
-      //this.death = this.map.createLayer('Death');
+      this.platforms.setAllChildren('body.checkCollision.right', false);
       
       this.map.setCollisionBetween(1, 5000, true, 'GroundLayer');
       for(var i = 0; i < this.platforms.children.length;i++){
          this.platforms.children[i].scale.x = this.platforms.children[i].ancho;
-      }
+      }*/
 
       // Creamos los enemigos y configuramos la escena
 
       this.start();
+      this.configure();
    
   },
   update: function(){
+     for (var i in this.toDelete){
+        if(this.entities[i] !== undefined){
+	   delete this.entities[i];
+	}
+     }
+     this.toDelete = {};
+     for (var i in this.toAdd){
+        this.entities[i]=this.toAdd[i];
+     }
+     this.toAdd = {};
+     
      for(var i in this.entities){
         this.entities[i].update();
-     };
+     }
+     for(var i in this.entities){
+	for(var j in this.entities){
+	   if (j !== i && this.physics.arcade.collide(this.entities[i].sprite, this.entities[j].sprite))
+              this.entities[i].onCollide(this.entities[j]);
+        }
+     }
 
   },
   start: function(){
-      this.entities = {};	 
-      this.entities.player = new Player('player', this.add.sprite(96, 864, 'player'), this);
-      this.entities.enemy1 = new Enemy('enemy1', this.add.sprite(768, 864, 'enemy'), this);
-      this.entities.enemy2 = new Enemy('enemy2', this.add.sprite(1440, 864, 'enemy'), this);
-      this.entities.enemy3 = new Enemy('enemy3', this.add.sprite(2560, 864, 'enemy'), this);
-      this.entities.death = new Entity('death', this.map.createLayer('Death'), this);
-      this.entities.death.deathly = true;
+      	 
+      this.toAdd.player = new Player('player', this.add.sprite(96, 864, 'player'), this);
+      this.toAdd.enemy1 = new Enemy('enemy1', this.add.sprite(768, 864, 'enemy'), this);
+      this.toAdd.enemy2 = new Enemy('enemy2', this.add.sprite(1440, 864, 'enemy'), this);
+      this.toAdd.enemy3 = new Enemy('enemy3', this.add.sprite(2560, 864, 'enemy'), this);
+      this.toAdd.ground = new Entity('ground', this.map.createLayer('GroundLayer'), this);
+      this.toAdd.death = new Entity('death', this.map.createLayer('Death'), this);
+      this.toAdd.platforms = new Entity('platforms', this.add.physicsGroup(), this);
+      this.map.createFromObjects('Platforms', 6, 'plat',1,true,false, this.toAdd.platforms.sprite);
+      this.toAdd.platforms.sprite.setAll('body.immovable', true);
+      this.toAdd.platforms.sprite.setAllChildren('body.checkCollision.down', false);
+      this.toAdd.platforms.sprite.setAllChildren('body.checkCollision.left', false);
+      this.toAdd.platforms.sprite.setAllChildren('body.checkCollision.right', false);
+      for(var i = 0; i < this.toAdd.platforms.sprite.children.length;i++){
+         this.toAdd.platforms.sprite.children[i].scale.x = this.toAdd.platforms.sprite.children[i].ancho;
+      }
+      this.toAdd.death.deathly = true;
       this.map.setCollisionBetween(1, 5000, true, 'Death');
-      console.log(this.entities);
-
-      this.configure();
-
+      this.map.setCollisionBetween(1, 5000, true, 'GroundLayer');
   },
 
   configure: function(){
@@ -79,6 +103,11 @@ var PlayScene = {
         this.components[i].update(this);
      }
   }
+  Entity.prototype.onCollide = function(collider){
+     for(var i = 0; i < this.components.length;i++){
+        this.components[i].onCollide(collider, this);
+     }
+  }
   // Player
   function Player(name, sprite, self){	  
      Entity.call(this, name, sprite, self);
@@ -98,7 +127,6 @@ var PlayScene = {
   function Enemy(name, sprite, self){	  
      Entity.call(this, name, sprite, self);
      self.game.physics.arcade.enable(this.sprite);
-     this.sprite.body.velocity.x = -300;
      this.deathly = true;
      this.components.push(new Move(self));
   }
@@ -125,19 +153,12 @@ var PlayScene = {
      this.attackButton = self.game.input.keyboard.addKey(Phaser.Keyboard.CONTROL);
      this.direction = 'rigth';
      this.waitFire = 0;
+     this.jump = false;
      this.update = function(entity){
            // Actiualiza la gravedad y el movimiento
         entity.sprite.body.velocity.x = 0;
         entity.sprite.body.velocity.y = entity.sprite.body.velocity.y + (this._game.time.elapsed/10) * 9.8;
-           // Si el jugador choca con el mapa la gravedad ya no le afecta
-        if(this._game.game.physics.arcade.collide(entity.sprite, this._game.groundLayer) &&
-		       	entity.sprite.body.touching.down){
-           entity.sprite.body.velocity.y = 0;	   
-        }
-        else if (this._game.game.physics.arcade.collide(entity.sprite, this._game.platforms) &&
-		       	entity.sprite.body.touching.down){
-           entity.sprite.body.velocity.y = 0;
-        }
+
            // Gestion del movimiento
         if (this.cursors.left.isDown){
            entity.sprite.body.velocity.x = this._speed*-(this._game.time.elapsed/10);
@@ -150,34 +171,41 @@ var PlayScene = {
 	   entity.sprite.scale.x = 1;
         }
            // Gestion del salto
-        if (this.jumpButton.isDown && (entity.sprite.body.onFloor() ||
-			       	entity.sprite.body.touching.down)){
+        if (this.jumpButton.isDown && this.jump){
            entity.sprite.body.velocity.y = this._jumpSpeed*-1;
-        }
+           this.jump = false;
+	}
            // Gestion del ataque
         this.waitFire++;
 
 	if (this.attackButton.isDown && this.waitFire >= 30){
-		console.log('Crea cuchillo');
-	   console.log(this._game.entities);
 	   if (this._game.entities.knife === undefined){
-	     
-               this._game.entities.knife = new Knife('knife', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
+               this._game.toAdd.knife = new Knife('knife', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
 	   }
 	   else if (this._game.entities.knife1 === undefined){
 	      
-     	      this._game.entities.knife1 = new Knife('knife1', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
+     	      this._game.toAdd.knife1 = new Knife('knife1', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
 	   }
 	   else if (this._game.entities.knife2 === undefined){
 	      
-              this._game.entities.knife2 = new Knife('knife2', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
+              this._game.toAdd.knife2 = new Knife('knife2', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
 	   }
 	   else if (this._game.entities.knife3 === undefined){
 	      
-              this._game.entities.knife3 = new Knife('knife3', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
+              this._game.toAdd.knife3 = new Knife('knife3', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
 	   }
 	   this.waitFire = 0;
-	   console.log(this._game.entities);
+        }
+     };
+     this.onCollide = function(collider, entity){
+        // Si el jugador choca con el mapa la gravedad ya no le afecta
+	console.log(entity.sprite.body.touching.down);
+        if((collider.name === 'platforms' || collider.name === 'ground') && !entity.sprite.body.touching.down){	
+           entity.sprite.body.velocity.y = 0;
+           this.jump = true;	   
+        }
+        else if (collider.name === 'ground' && entity.sprite.body.touching.down){
+           entity.sprite.body.velocity.x = 0;
         }
      };
   }
@@ -186,45 +214,62 @@ var PlayScene = {
      this._game = self;
      this.update = function(entity){
 	     
-	for (var i in this._game.entities){
+/*	for (var i in this._game.entities){
            if (this._game.game.physics.arcade.collide(entity.sprite, this._game.entities[i].sprite) && this._game.entities[i].deathly){
 		   
-		   this.restart(this._game);
+		   this.restart();
+		   break;
 	   }
+	}*/
+     };
+     this.onCollide = function(collider, entity){
+        if (collider.deathly){
+ 	   for(var i in this._game.entities){
+	      if(this._game.entities[i].name !== 'platforms'){
+	      	 this._game.entities[i].sprite.kill();
+	         this._game.toDelete[i] = true;
+	      }
+	   }
+	   this.restart();
 	}
-     }
-     this.restart = function(game){
-	console.log('restart');
-	console.log(this._game.entities);
-        for(var i in this._game.entities){
-	   game.entities[i].sprite.kill();
+     };
+     this.restart = function(){
+        /*for(var i in this._game.entities){
+	   this._game.entities[i].sprite.kill();
+	   this._game.toDelete[i] = true;
 	}
-	
-	game.start();
-     }
+	*/
+	this._game.start();
+     };
   }
   function Move(self){
      this._game = self;
-     this._jumpSpeed = 350;
+     this.speed = -1000;
      this.turn = 0;
      this.direction = 'rigth';
      this.update = function(entity){
 	this.turn++;
+	entity.sprite.body.velocity.x = this.speed*(this._game.time.elapsed/100);
         if (this.turn > 90){
-	   entity.sprite.body.velocity.x *= -1;
 	   entity.sprite.scale.x *= -1;
 	   this.turn = 0;
+	   this.speed*=-1;
 	}
-	for (var i in this._game.entities){
+/*	for (var i in this._game.entities){
 	   if (this._game.game.physics.arcade.collide(entity.sprite, this._game.entities[i].sprite) && this._game.entities[i].kill){
-	      console.log('Enemy die');
-	      console.log(this._game.entities);
+	      this._game.toDelete[entity.name] = true;
 	      entity.sprite.kill();
-	      delete this._game.entities[entity.name];
-	      console.log(this._game.entities);
+	      //delete this._game.entities[entity.name];
+
 	   }
-	}
+	}*/
      }
+     this.onCollide = function(collider, entity){
+        if(collider.kill){
+	   this._game.toDelete[entity.name] = true;
+	   entity.sprite.kill();
+	}
+     };
   }
   function Throw(self, direction){
      this._game = self;
@@ -242,32 +287,30 @@ var PlayScene = {
 	entity.sprite.angle+= 10*(this.speedX/500);
 	if (this.knifeLife > 100){
 	   entity.sprite.kill();
-	   delete this._game.entities[entity.name];
+	   this._game.toDelete[entity.name] = true;
 	}
-	for (var i in this._game.entities){
+/*	for (var i in this._game.entities){
 	   if (this._game.game.physics.arcade.collide(entity.sprite, this._game.entities[i].sprite)){
-	      console.log('Knife destruction');
-	      console.log(this._game.entities);
 	      entity.sprite.kill();
-	      delete this._game.entities[entity.name];
-	      console.log(this._game.entities);
+	      this._game.toDelete[entity.name] = true;
+	      //delete this._game.entities[entity.name];
 	   }
 	}
 	if (this._game.game.physics.arcade.collide(entity.sprite, this._game.groundLayer)){
-		console.log('Knife destruction');
-		console.log(this._game.entities);
 	   entity.sprite.kill();
-	   delete this._game.entities[entity.name];
-	   console.log(this._game.entities);
+	   this._game.toDelete[entity.name] = true;
+	   //delete this._game.entities[entity.name];
         }
 	else if (this._game.game.physics.arcade.collide(entity.sprite, this._game.platforms)){
-		console.log('Knife destruction');
-		console.log(this._game.entities);
 	   entity.sprite.kill();
-	   delete this._game.entities[entity.name];
-	   console.log(this._game.entities);
-        }
-     }
+	   this._game.toDelete[entity.name] = true;
+	   //delete this._game.entities[entity.name];
+        }*/
+     };
+     this.onCollide = function(collider, entity){
+        entity.sprite.kill();
+	this._game.toDelete[entity.name] = true;
+     };
   }
 
 

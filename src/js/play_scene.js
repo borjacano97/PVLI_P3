@@ -4,27 +4,17 @@ var PlayScene = {
   entities: {},
   toDelete: {},
   toAdd: {},
+  paused: false,
 
   create: function () {
-      
-      
       this.game.physics.startSystem(Phaser.Physics.ARCADE);
       
       // Añadimos el tilemap y el yileset
       this.map = this.add.tilemap('tilemap');
       this.map.addTilesetImage('tiles', 'tiles');
       // Creamos los layer del tilemap y las plataformas
-    /*  this.platforms = this.add.physicsGroup(); 
-      this.map.createFromObjects('Platforms', 6, 'plat',1,true,false,this.platforms);
-      this.platforms.setAll('body.immovable', true);
-      this.platforms.setAllChildren('body.checkCollision.down', false);
-      this.platforms.setAllChildren('body.checkCollision.left', false);
-      this.platforms.setAllChildren('body.checkCollision.right', false);
-      
-      this.map.setCollisionBetween(1, 5000, true, 'GroundLayer');
-      for(var i = 0; i < this.platforms.children.length;i++){
-         this.platforms.children[i].scale.x = this.platforms.children[i].ancho;
-      }*/
+      this.pauseButton = this.game.input.keyboard.addKey(Phaser.Keyboard.ESC);
+      this.pauseControl = false;
 
       // Creamos los enemigos y configuramos la escena
 
@@ -33,6 +23,7 @@ var PlayScene = {
    
   },
   update: function(){
+
      for (var i in this.toDelete){
         if(this.entities[i] !== undefined){
 	   delete this.entities[i];
@@ -40,20 +31,23 @@ var PlayScene = {
      }
      this.toDelete = {};
      for (var i in this.toAdd){
+	     
         this.entities[i]=this.toAdd[i];
      }
      this.toAdd = {};
-     
-     for(var i in this.entities){
-        this.entities[i].update();
-     }
-     for(var i in this.entities){
-	for(var j in this.entities){
-	   if (j !== i && this.physics.arcade.collide(this.entities[i].sprite, this.entities[j].sprite))
-              this.entities[i].onCollide(this.entities[j]);
+     if(!this.paused){
+        for(var i in this.entities){
+           this.entities[i].update();
+        }
+        for(var i in this.entities){
+	   for(var j in this.entities){if(i === 'knife') console.log(this.physics.arcade.collide(this.entities[i].sprite, this.entities[j].sprite));
+	      if (this.physics.arcade.collide(this.entities[i].sprite, this.entities[j].sprite)){
+	         if(i === 'knife') console.log('eureka');
+	     	      this.entities[i].onCollide(this.entities[j]);
+	      }
+           }
         }
      }
-
   },
   start: function(){
       	 
@@ -61,6 +55,15 @@ var PlayScene = {
       this.toAdd.enemy1 = new Enemy('enemy1', this.add.sprite(768, 864, 'enemy'), this);
       this.toAdd.enemy2 = new Enemy('enemy2', this.add.sprite(1440, 864, 'enemy'), this);
       this.toAdd.enemy3 = new Enemy('enemy3', this.add.sprite(2560, 864, 'enemy'), this);
+      this.toAdd.enemy4 = new Enemy('enemy4', this.add.sprite(122*32, 26*32, 'enemy'), this);
+      this.toAdd.enemy5 = new Enemy('enemy5', this.add.sprite(223*32, 28*32, 'enemy'), this);
+      this.toAdd.enemy6 = new Enemy('enemy6', this.add.sprite(266*32, 27*32, 'enemy'), this);
+      this.toAdd.enemy7 = new Enemy('enemy7', this.add.sprite(244*32, 27*32, 'enemy'), this);
+      this.toAdd.enemy8 = new Enemy('enemy8', this.add.sprite(325*32, 25*32, 'enemy'), this);
+      this.toAdd.enemy9 = new Enemy('enemy9', this.add.sprite(365*32, 19*32, 'enemy'), this);
+      this.toAdd.enemy10 = new Enemy('enemy10', this.add.sprite(436*32, 34*32, 'enemy'), this);
+      this.toAdd.enemy11 = new Enemy('enemy11', this.add.sprite(463*32, 11*32, 'enemy'), this);
+      this.toAdd.goal = new Goal('goal', this.add.sprite(495*32, 27*32, 'goal'), this);
       this.toAdd.ground = new Entity('ground', this.map.createLayer('GroundLayer'), this);
       this.toAdd.death = new Entity('death', this.map.createLayer('Death'), this);
       this.toAdd.platforms = new Entity('platforms', this.add.physicsGroup(), this);
@@ -73,19 +76,36 @@ var PlayScene = {
          this.toAdd.platforms.sprite.children[i].scale.x = this.toAdd.platforms.sprite.children[i].ancho;
       }
       this.toAdd.death.deathly = true;
-      this.map.setCollisionBetween(1, 5000, true, 'Death');
-      this.map.setCollisionBetween(1, 5000, true, 'GroundLayer');
+      this.map.setCollisionBetween(1, 16000, true, 'Death');
+      this.map.setCollisionBetween(1, 16000, true, 'GroundLayer');
+
   },
 
   configure: function(){
      // Start the Arcade Physics systems
-     this.game.world.setBounds(0, 0, 3200, 1120);
+     this.game.world.setBounds(0, 0, 16000, 1120);
      
      this.game.stage.backgroundColor = '#a9f0ff';
 
   },
   render: function(){
-     //this.game.debug.cameraInfo(this.camera, 32, 32);
+
+     	if (this.pauseButton.isDown && !this.pauseControl){
+	   this.pauseControl = true;
+	}
+	if (!this.pauseButton.isDown && this.pauseControl){
+           if (!this.game.paused){	  
+	      this.game.paused = true;
+	      this.pauseImage = this.game.add.image(this.game.camera.x,this.game.camera.y,'pause');
+
+	   }
+	   else{
+	      this.game.paused = false;
+	      if(this.pauseImage);
+	         this.pauseImage.kill();
+	   }
+	   this.pauseControl = false;
+	}
   }
   
 };
@@ -112,13 +132,13 @@ var PlayScene = {
   function Player(name, sprite, self){	  
      Entity.call(this, name, sprite, self);
      
-     this.components.push(new Controller(self));
+     
      this.components.push(new Die(self));
      self.game.physics.arcade.enable(this.sprite);
         
      this.sprite.body.gravity.y = 0;
      this.sprite.body.gravity.x = 0;
-     this.sprite.body.velocity.x = 0;
+     this.components.push(new Controller(self));
      self.camera.follow(this.sprite);
   }
   Player.prototype = Object.create(Entity.prototype);
@@ -142,7 +162,13 @@ var PlayScene = {
   }
   Knife.prototype = Object.create(Entity.prototype);
   Knife.prototype.constructor = Entity;
-
+  // Meta
+  function Goal(name, sprite, self){
+     Entity.call(this, name, sprite, self);
+     self.game.physics.arcade.enable(this.sprite);
+  }
+  Goal.prototype = Object.create(Entity.prototype);
+  Goal.prototype.constructor = Entity;
   // Componentes-------------------------------------------------------------------
   function Controller(self){
      this._game = self;
@@ -154,11 +180,17 @@ var PlayScene = {
      this.direction = 'rigth';
      this.waitFire = 0;
      this.jump = false;
+     this.first = 0;
      this.update = function(entity){
            // Actiualiza la gravedad y el movimiento
         entity.sprite.body.velocity.x = 0;
-        entity.sprite.body.velocity.y = entity.sprite.body.velocity.y + (this._game.time.elapsed/10) * 9.8;
-
+	if (this.first < 50){
+	   this.first++;
+	   entity.sprite.body.velocity.y = 0;
+	}
+	else{
+           entity.sprite.body.velocity.y = entity.sprite.body.velocity.y + (this._game.time.elapsed/10) * 9.8;
+	}
            // Gestion del movimiento
         if (this.cursors.left.isDown){
            entity.sprite.body.velocity.x = this._speed*-(this._game.time.elapsed/10);
@@ -171,6 +203,7 @@ var PlayScene = {
 	   entity.sprite.scale.x = 1;
         }
            // Gestion del salto
+
         if (this.jumpButton.isDown && this.jump){
            entity.sprite.body.velocity.y = this._jumpSpeed*-1;
            this.jump = false;
@@ -195,18 +228,28 @@ var PlayScene = {
               this._game.toAdd.knife3 = new Knife('knife3', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
 	   }
 	   this.waitFire = 0;
+	   
         }
      };
      this.onCollide = function(collider, entity){
         // Si el jugador choca con el mapa la gravedad ya no le afecta
-	console.log(entity.sprite.body.touching.down);
-        if((collider.name === 'platforms' || collider.name === 'ground') && !entity.sprite.body.touching.down){	
+        if(collider.name === 'platforms' && entity.sprite.body.touching.down ){	
            entity.sprite.body.velocity.y = 0;
            this.jump = true;	   
         }
+	else if(collider.name === 'ground' && !entity.sprite.body.touching.down){
+	   entity.sprite.body.velocity.y = 0;
+           this.jump = true;
+	}
         else if (collider.name === 'ground' && entity.sprite.body.touching.down){
            entity.sprite.body.velocity.x = 0;
         }
+	if (collider.name === 'goal'){
+	   this._game.world.setBounds(0, 0, 800, 480);
+           this._game.stage.backgroundColor = '#000000';
+	   
+	   this._game.state.start('win');
+	}
      };
   }
 
@@ -289,27 +332,12 @@ var PlayScene = {
 	   entity.sprite.kill();
 	   this._game.toDelete[entity.name] = true;
 	}
-/*	for (var i in this._game.entities){
-	   if (this._game.game.physics.arcade.collide(entity.sprite, this._game.entities[i].sprite)){
-	      entity.sprite.kill();
-	      this._game.toDelete[entity.name] = true;
-	      //delete this._game.entities[entity.name];
-	   }
-	}
-	if (this._game.game.physics.arcade.collide(entity.sprite, this._game.groundLayer)){
-	   entity.sprite.kill();
-	   this._game.toDelete[entity.name] = true;
-	   //delete this._game.entities[entity.name];
-        }
-	else if (this._game.game.physics.arcade.collide(entity.sprite, this._game.platforms)){
-	   entity.sprite.kill();
-	   this._game.toDelete[entity.name] = true;
-	   //delete this._game.entities[entity.name];
-        }*/
+
      };
      this.onCollide = function(collider, entity){
-        entity.sprite.kill();
-	this._game.toDelete[entity.name] = true;
+
+	   entity.sprite.kill();
+	   this._game.toDelete[entity.name] = true;
      };
   }
 

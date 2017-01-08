@@ -2,6 +2,7 @@
 
 var PlayScene = require('./play_scene.js');
 var MenuScene = require('./menu_scene.js');
+var WinScene = require('./win_scene.js');
 
 
 var BootScene = {
@@ -27,12 +28,15 @@ var PreloaderScene = {
     // TODO: load here the assets for the game
     
     this.load.onLoadStart.add(this.loadStart, this);
+    this.game.load.image('goal', 'images/winLine.png');
+    this.game.load.image('pause', 'images/pause.png');
     this.game.load.image('player', 'images/Leon.png');
     this.game.load.image('knife', 'images/Cuchillo.png');
     this.game.load.image('enemy', 'images/Gamba.png');
     this.game.load.image('plat', 'images/Platforms.png');
     this.game.load.tilemap('tilemap', 'images/map.json', null, Phaser.Tilemap.TILED_JSON);
     this.game.load.image("tiles", "images/tiles.png");
+    this.game.load.image('win', 'images/win.png');
     this.load.onLoadComplete.add(this.loadComplete, this);
   },
 
@@ -60,6 +64,7 @@ window.onload = function () {
   game.state.add('preloader', PreloaderScene);
   game.state.add('menu', MenuScene);
   game.state.add('play', PlayScene);
+  game.state.add('win', WinScene);
 
   game.state.start('boot');
 };

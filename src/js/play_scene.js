@@ -40,9 +40,8 @@ var PlayScene = {
            this.entities[i].update();
         }
         for(var i in this.entities){
-	   for(var j in this.entities){if(i === 'knife') console.log(this.physics.arcade.collide(this.entities[i].sprite, this.entities[j].sprite));
+	   for(var j in this.entities){
 	      if (this.physics.arcade.collide(this.entities[i].sprite, this.entities[j].sprite)){
-	         if(i === 'knife') console.log('eureka');
 	     	      this.entities[i].onCollide(this.entities[j]);
 	      }
            }
@@ -51,7 +50,7 @@ var PlayScene = {
   },
   start: function(){
       	 
-      this.toAdd.player = new Player('player', this.add.sprite(96, 864, 'player'), this);
+      this.toAdd.player = new Player('player', this.add.sprite(96, 832, 'player'), this);
       this.toAdd.enemy1 = new Enemy('enemy1', this.add.sprite(768, 864, 'enemy'), this);
       this.toAdd.enemy2 = new Enemy('enemy2', this.add.sprite(1440, 864, 'enemy'), this);
       this.toAdd.enemy3 = new Enemy('enemy3', this.add.sprite(2560, 864, 'enemy'), this);
@@ -64,7 +63,11 @@ var PlayScene = {
       this.toAdd.enemy10 = new Enemy('enemy10', this.add.sprite(436*32, 34*32, 'enemy'), this);
       this.toAdd.enemy11 = new Enemy('enemy11', this.add.sprite(463*32, 11*32, 'enemy'), this);
       this.toAdd.goal = new Goal('goal', this.add.sprite(495*32, 27*32, 'goal'), this);
-      this.toAdd.ground = new Entity('ground', this.map.createLayer('GroundLayer'), this);
+            this.map.createLayer('GroundLayer');
+      this.toAdd.ground = new Entity('ground', this.add.physicsGroup(), this);
+      this.map.createFromObjects('GroundObjects', 7, 'blank',1,true,false, this.toAdd.ground.sprite);
+
+      this.toAdd.ground.sprite.setAll('body.immovable', true);
       this.toAdd.death = new Entity('death', this.map.createLayer('Death'), this);
       this.toAdd.platforms = new Entity('platforms', this.add.physicsGroup(), this);
       this.map.createFromObjects('Platforms', 6, 'plat',1,true,false, this.toAdd.platforms.sprite);
@@ -75,9 +78,13 @@ var PlayScene = {
       for(var i = 0; i < this.toAdd.platforms.sprite.children.length;i++){
          this.toAdd.platforms.sprite.children[i].scale.x = this.toAdd.platforms.sprite.children[i].ancho;
       }
+      for(var i = 0; i < this.toAdd.ground.sprite.children.length;i++){
+         this.toAdd.ground.sprite.children[i].scale.x = this.toAdd.ground.sprite.children[i].ancho;
+	 this.toAdd.ground.sprite.children[i].scale.y = this.toAdd.ground.sprite.children[i].alto;
+      }
       this.toAdd.death.deathly = true;
       this.map.setCollisionBetween(1, 16000, true, 'Death');
-      this.map.setCollisionBetween(1, 16000, true, 'GroundLayer');
+      console.log(this.toAdd);
 
   },
 
@@ -137,7 +144,8 @@ var PlayScene = {
      self.game.physics.arcade.enable(this.sprite);
         
      this.sprite.body.gravity.y = 0;
-     this.sprite.body.gravity.x = 0;
+     this.sprite.body.gravity.x = 0
+     this.sprite.body.inmovable = true;
      this.components.push(new Controller(self));
      self.camera.follow(this.sprite);
   }
@@ -157,6 +165,7 @@ var PlayScene = {
      Entity.call(this, name, sprite, self);
      self.game.physics.arcade.enable(this.sprite);
      this.direction = direction;
+     this.sprite.body.inmovable = true;
      this.kill = true;
      this.components.push(new Throw(self, direction));
   }
@@ -204,6 +213,7 @@ var PlayScene = {
         }
            // Gestion del salto
 
+	if(this.jumpButton.isDown) console.log(entity.sprite.body.touching.down);
         if (this.jumpButton.isDown && this.jump){
            entity.sprite.body.velocity.y = this._jumpSpeed*-1;
            this.jump = false;
@@ -237,13 +247,11 @@ var PlayScene = {
            entity.sprite.body.velocity.y = 0;
            this.jump = true;	   
         }
-	else if(collider.name === 'ground' && !entity.sprite.body.touching.down){
+	else if(collider.name === 'ground' && entity.sprite.body.touching.down){
 	   entity.sprite.body.velocity.y = 0;
            this.jump = true;
 	}
-        else if (collider.name === 'ground' && entity.sprite.body.touching.down){
-           entity.sprite.body.velocity.x = 0;
-        }
+
 	if (collider.name === 'goal'){
 	   this._game.world.setBounds(0, 0, 800, 480);
            this._game.stage.backgroundColor = '#000000';
@@ -256,32 +264,20 @@ var PlayScene = {
   function Die(self){
      this._game = self;
      this.update = function(entity){
-	     
-/*	for (var i in this._game.entities){
-           if (this._game.game.physics.arcade.collide(entity.sprite, this._game.entities[i].sprite) && this._game.entities[i].deathly){
-		   
-		   this.restart();
-		   break;
-	   }
-	}*/
      };
      this.onCollide = function(collider, entity){
         if (collider.deathly){
  	   for(var i in this._game.entities){
-	      if(this._game.entities[i].name !== 'platforms'){
-	      	 this._game.entities[i].sprite.kill();
+	      if(this._game.entities[i].name !== 'platforms' && this._game.entities[i].name !== 'ground'){
+	      	 this._game.entities[i].sprite.destroy();
 	         this._game.toDelete[i] = true;
 	      }
+	      else this._game.toDelete[i] = true;
 	   }
 	   this.restart();
 	}
      };
      this.restart = function(){
-        /*for(var i in this._game.entities){
-	   this._game.entities[i].sprite.kill();
-	   this._game.toDelete[i] = true;
-	}
-	*/
 	this._game.start();
      };
   }
@@ -298,19 +294,11 @@ var PlayScene = {
 	   this.turn = 0;
 	   this.speed*=-1;
 	}
-/*	for (var i in this._game.entities){
-	   if (this._game.game.physics.arcade.collide(entity.sprite, this._game.entities[i].sprite) && this._game.entities[i].kill){
-	      this._game.toDelete[entity.name] = true;
-	      entity.sprite.kill();
-	      //delete this._game.entities[entity.name];
-
-	   }
-	}*/
      }
      this.onCollide = function(collider, entity){
         if(collider.kill){
 	   this._game.toDelete[entity.name] = true;
-	   entity.sprite.kill();
+	   entity.sprite.destroy();
 	}
      };
   }
@@ -328,17 +316,15 @@ var PlayScene = {
         entity.sprite.body.velocity.y = this.speedY + (this._game.time.elapsed)* 9.8;
 	this.speedY = entity.sprite.body.velocity.y;
 	entity.sprite.angle+= 10*(this.speedX/500);
-	if (this.knifeLife > 100){
-	   entity.sprite.kill();
+	if (this.knifeLife > 25){
+	   entity.sprite.destroy();
+
 	   this._game.toDelete[entity.name] = true;
 	}
 
      };
      this.onCollide = function(collider, entity){
-
-	   entity.sprite.kill();
-	   this._game.toDelete[entity.name] = true;
-     };
+     }
   }
 
 

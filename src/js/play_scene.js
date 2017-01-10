@@ -63,6 +63,7 @@ var PlayScene = {
       this.toAdd.enemy10 = new Enemy('enemy10', this.add.sprite(436*32, 34*32, 'enemy'), this);
       this.toAdd.enemy11 = new Enemy('enemy11', this.add.sprite(463*32, 11*32, 'enemy'), this);
       this.toAdd.goal = new Goal('goal', this.add.sprite(495*32, 27*32, 'goal'), this);
+      this.toAdd.pepper = new Goal('pepper', this.add.sprite(252*32, 10*32, 'pepper'), this);
             this.map.createLayer('GroundLayer');
       this.toAdd.ground = new Entity('ground', this.add.physicsGroup(), this);
       this.map.createFromObjects('GroundObjects', 7, 'blank',1,true,false, this.toAdd.ground.sprite);
@@ -84,8 +85,6 @@ var PlayScene = {
       }
       this.toAdd.death.deathly = true;
       this.map.setCollisionBetween(1, 16000, true, 'Death');
-      console.log(this.toAdd);
-
   },
 
   configure: function(){
@@ -160,6 +159,14 @@ var PlayScene = {
   }
   Enemy.prototype = Object.create(Entity.prototype);
   Enemy.prototype.constructor = Entity;
+  // Pimiento
+  function Pepper(name, sprite, self){	  
+     Entity.call(this, name, sprite, self);
+     self.game.physics.arcade.enable(this.sprite);
+     this.components.push(new PowerUp(self));
+  }
+  Pepper.prototype = Object.create(Entity.prototype);
+  Pepper.prototype.constructor = Entity;
   // Cuchillo
   function Knife(name, sprite, direction, self){
      Entity.call(this, name, sprite, self);
@@ -181,8 +188,9 @@ var PlayScene = {
   // Componentes-------------------------------------------------------------------
   function Controller(self){
      this._game = self;
-     this._speed = 300;
-     this._jumpSpeed = 550;
+     this._speed = 250;
+     this._jumpSpeed = 570;
+     this.fireFrec = 20;
      this.cursors = self.game.input.keyboard.createCursorKeys();
      this.jumpButton = self.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
      this.attackButton = self.game.input.keyboard.addKey(Phaser.Keyboard.CONTROL);
@@ -190,15 +198,25 @@ var PlayScene = {
      this.waitFire = 0;
      this.jump = false;
      this.first = 0;
+     this.frenesi = 0;
      this.update = function(entity){
            // Actiualiza la gravedad y el movimiento
         entity.sprite.body.velocity.x = 0;
-	if (this.first < 50){
+	if (this.first < 5){
 	   this.first++;
 	   entity.sprite.body.velocity.y = 0;
 	}
 	else{
            entity.sprite.body.velocity.y = entity.sprite.body.velocity.y + (this._game.time.elapsed/10) * 9.8;
+	if (entity.sprite.body.velocity.y > 50) this.jump = false;
+	if (this.frenesi <= 0){
+	   this.speed = 250;
+	   this.fireFrec = 20;
+	   entity.sprite.tint = 0xFFFFFF;
+	}
+	else {
+	   entity.sprite.tint = Math.random() * 0xffffff;
+	   this.frenesi--;
 	}
            // Gestion del movimiento
         if (this.cursors.left.isDown){
@@ -213,7 +231,6 @@ var PlayScene = {
         }
            // Gestion del salto
 
-	if(this.jumpButton.isDown) console.log(entity.sprite.body.touching.down);
         if (this.jumpButton.isDown && this.jump){
            entity.sprite.body.velocity.y = this._jumpSpeed*-1;
            this.jump = false;
@@ -221,7 +238,7 @@ var PlayScene = {
            // Gestion del ataque
         this.waitFire++;
 
-	if (this.attackButton.isDown && this.waitFire >= 30){
+	if (this.attackButton.isDown && this.waitFire >= this.fireFrec){
 	   if (this._game.entities.knife === undefined){
                this._game.toAdd.knife = new Knife('knife', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
 	   }
@@ -238,7 +255,7 @@ var PlayScene = {
               this._game.toAdd.knife3 = new Knife('knife3', this._game.add.sprite(entity.sprite.x, entity.sprite.y-30,'knife'), this.direction, this._game);
 	   }
 	   this.waitFire = 0;
-	   
+	}
         }
      };
      this.onCollide = function(collider, entity){
@@ -252,11 +269,18 @@ var PlayScene = {
            this.jump = true;
 	}
 
-	if (collider.name === 'goal'){
+	else if (collider.name === 'goal'){
 	   this._game.world.setBounds(0, 0, 800, 480);
            this._game.stage.backgroundColor = '#000000';
 	   
 	   this._game.state.start('win');
+	}
+	else if (collider.name === 'pepper'){
+	   this.frenesi = 700;
+	   this._speed = 300;
+	   this.fireFrec = 10;
+	   this._game.entities[collider.name].sprite.destroy();
+	   this._game.toDelete[collider.name] = true;
 	}
      };
   }
@@ -302,6 +326,15 @@ var PlayScene = {
 	}
      };
   }
+  function PowerUp(self){
+     this._game = self;
+     this.update = function(entity){
+	
+     };
+     this.onCollide = function(collider, entity){
+	
+     };
+  }
   function Throw(self, direction){
      this._game = self;
      if (direction === 'left'){
@@ -316,15 +349,21 @@ var PlayScene = {
         entity.sprite.body.velocity.y = this.speedY + (this._game.time.elapsed)* 9.8;
 	this.speedY = entity.sprite.body.velocity.y;
 	entity.sprite.angle+= 10*(this.speedX/500);
-	if (this.knifeLife > 25){
+	if (this.knifeLife > 100){
 	   entity.sprite.destroy();
-
 	   this._game.toDelete[entity.name] = true;
 	}
-
-     };
-     this.onCollide = function(collider, entity){
+	if (this._game.physics.arcade.collide(entity.sprite, this._game.entities['ground'].sprite)){
+	   entity.sprite.destroy();
+	   this._game.toDelete[entity.name] = true;}
+	else if (this._game.physics.arcade.collide(entity.sprite, this._game.entities['platforms'].sprite)){
+		   entity.sprite.destroy();
+	   this._game.toDelete[entity.name] = true;}
      }
+     this.onCollide = function(collider, entity){
+/*	entity.sprite.renderable = false;
+        this._game.toDelete[entity.name] = true;*/
+     };
   }
 
 

@@ -1,11 +1,6 @@
 var MenuScene = {
     create: function () {
-        this.game.world._bounds.height = 0;
-	this.game.world._bounds.width = 0;
-	this.game.world._bounds.x = 0;
-	this.game.world._bounds.y = 0;
-	this.game.world._bounds.type = 22;
-	console.log(this.game.world);
+ 
         var logo = this.game.add.sprite(this.game.world.centerX, 
                                         this.game.world.centerY, 
                                         'logo');

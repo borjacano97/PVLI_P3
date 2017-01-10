@@ -8,18 +8,22 @@ var PlayScene = {
 
   create: function () {
       this.game.physics.startSystem(Phaser.Physics.ARCADE);
-      
+      // Añadimos el background
+      this.background = this.game.add.tileSprite(-30, 532, 16000, 500, 'background'); 
+
       // Añadimos el tilemap y el yileset
       this.map = this.add.tilemap('tilemap');
       this.map.addTilesetImage('tiles', 'tiles');
       // Creamos los layer del tilemap y las plataformas
       this.pauseButton = this.game.input.keyboard.addKey(Phaser.Keyboard.ESC);
       this.pauseControl = false;
+      this.goMenu =this.game.input.keyboard.addKey(Phaser.Keyboard.M);
 
       // Creamos los enemigos y configuramos la escena
 
       this.start();
       this.configure();
+
    
   },
   update: function(){
@@ -111,6 +115,12 @@ var PlayScene = {
 	         this.pauseImage.kill();
 	   }
 	   this.pauseControl = false;
+	}
+	if(this.game.paused && this.goMenu.isDown){
+	   this.game.world.setBounds(0,0, 800, 640);
+	   this.game.paused = false;
+	   this.game.stage.backgroundColor = '#000000';
+	   this.game.state.start('menu');
 	}
   }
   
@@ -270,9 +280,8 @@ var PlayScene = {
 	}
 
 	else if (collider.name === 'goal'){
-	   this._game.world.setBounds(0, 0, 800, 480);
            this._game.stage.backgroundColor = '#000000';
-	   
+	   this._game.world.setBounds(0,0, 800, 600);
 	   this._game.state.start('win');
 	}
 	else if (collider.name === 'pepper'){

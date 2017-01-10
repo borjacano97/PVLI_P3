@@ -29,6 +29,7 @@ var PreloaderScene = {
     
     this.load.onLoadStart.add(this.loadStart, this);
     this.game.load.image('pepper', 'images/pepper.png');
+    this.game.load.image('background', 'images/background.png');
     this.game.load.image('goal', 'images/winLine.png');
     this.game.load.image('blank', 'images/blank.png');
     this.game.load.image('pause', 'images/pause.png');

@@ -1,4 +1,4 @@
-var MenuScene = {
+var WinScene = {
     create: function () {
         
         var logo = this.game.add.sprite(this.game.world.centerX, 
@@ -22,4 +22,4 @@ var MenuScene = {
     } 
 };
 
-module.exports = MenuScene;
+module.exports = WinScene;
